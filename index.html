@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bird Work Planner Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#050505">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>DASHBOARD</h1>
+    <nav>
+      <button id="dashBtn" class="active" onclick="showView('dashboard')">Dashboard</button>
+      <button id="invBtn" onclick="showView('invoices')">Invoices</button>
+      <button onclick="backup()">Backup</button>
+    </nav>
+  </header>
+
+  <section id="dashboardView">
+    <div class="trackerRow">
+      <div class="tracker">Hours Worked <b id="tHours">0</b></div>
+      <div class="tracker">Paid <b id="tPaid">$0.00</b></div>
+      <div class="tracker">Owed <b id="tOwed">$0.00</b></div>
+      <div class="tracker">Unpaid Invoices <b id="tUnpaid">0</b></div>
+    </div>
+
+    <main class="dashboardGrid">
+      <section class="calendarPanel panel">
+        <div class="monthHeader">
+          <button onclick="moveMonth(-1)">‹</button>
+          <h2 id="monthTitle"></h2>
+          <button onclick="moveMonth(1)">›</button>
+        </div>
+        <div id="calendar"></div>
+      </section>
+
+      <aside class="jobPanel panel paper">
+        <h2>JOB / EVENT INFO</h2>
+        <input type="hidden" id="entryId">
+        <label>Date</label><input id="entryDate" type="date">
+        <label>Type</label>
+        <select id="entryType" onchange="toggleJobFields();autoSaveEntry()">
+          <option value="scheduled">Scheduled Job</option>
+          <option value="completed">Completed Job</option>
+          <option value="personal">Personal Event</option>
+        </select>
+        <label>Description</label><input id="entryDesc" oninput="autoSaveEntry()">
+        <div class="two">
+          <div><label>Start</label><input id="entryStart" type="time" oninput="calcHours();autoSaveEntry()"></div>
+          <div><label>End</label><input id="entryEnd" type="time" oninput="calcHours();autoSaveEntry()"></div>
+        </div>
+        <div id="jobFields">
+          <div class="three">
+            <div><label>Hours</label><input id="entryHours" type="number" step="0.25" oninput="autoSaveEntry()"></div>
+            <div><label>Owed</label><input id="entryOwed" type="number" step="0.01" oninput="autoSaveEntry()"></div>
+            <div><label>Received</label><input id="entryReceived" type="number" step="0.01" oninput="autoSaveEntry()"></div>
+          </div>
+          <label>Client</label><input id="entryClient" list="clientList" oninput="autoSaveEntry();renderClientArea()">
+          <datalist id="clientList"></datalist>
+          <label>Phone</label><input id="entryPhone" oninput="autoSaveEntry()">
+          <label>Address</label><input id="entryAddress" oninput="autoSaveEntry()">
+        </div>
+        <label>Notes</label><textarea id="entryNotes" oninput="autoSaveEntry()"></textarea>
+        <div class="btnRow">
+          <button class="good" onclick="saveEntry()">Save</button>
+          <button onclick="newEntry()">Add</button>
+          <button class="bad" onclick="deleteEntry()">Delete</button>
+        </div>
+      </aside>
+
+      <section class="agendaPanel panel">
+        <h2>Agenda for Selected Day</h2>
+        <div id="selectedDayLabel" class="subTitle"></div>
+        <div id="dayAgenda"></div>
+        <h3>Tasks</h3>
+        <div id="taskList"></div>
+        <div class="two">
+          <input id="newTask" placeholder="Add task">
+          <button onclick="addTask()">Add Task</button>
+        </div>
+      </section>
+
+      <section class="clientPanel panel">
+        <div class="tabButtons">
+          <button class="active" id="clientInfoTab" onclick="showClientTab('info')">Client Info</button>
+          <button id="clientInvTab" onclick="showClientTab('invoices')">Invoices</button>
+        </div>
+
+        <div id="clientInfoBox">
+          <label>Selected Client</label>
+          <input id="clientFocus" list="clientList" oninput="renderClientArea()">
+          <div class="clientTrackers">
+            <div>Total Hours <b id="cHours">0</b></div>
+            <div>Amount Paid <b id="cPaid">$0.00</b></div>
+            <div>Amount Owed <b id="cOwed">$0.00</b></div>
+          </div>
+          <div id="clientDetails"></div>
+        </div>
+
+        <div id="clientInvoiceBox" class="hidden">
+          <button class="blue" onclick="newInvoiceForClient()">+ Invoice for Client</button>
+          <div id="clientInvoices"></div>
+        </div>
+      </section>
+    </main>
+  </section>
+
+  <section id="invoiceView" class="hidden">
+    <div class="invoiceLayout">
+      <section class="panel">
+        <div class="topLine">
+          <h2>Invoice Builder</h2>
+          <button class="blue" onclick="newInvoice()">+ New Invoice</button>
+        </div>
+
+        <input type="hidden" id="invoiceId">
+        <label>Client</label><input id="invClient" list="clientList" oninput="autoSaveInvoice();renderInvoicePreview()">
+        <div class="two">
+          <div><label>Phone</label><input id="invPhone" oninput="autoSaveInvoice();renderInvoicePreview()"></div>
+          <div><label>Date</label><input id="invDate" type="date" onchange="autoSaveInvoice();renderInvoicePreview()"></div>
+        </div>
+        <label>Address</label><input id="invAddress" oninput="autoSaveInvoice();renderInvoicePreview()">
+
+        <h3>SERVICES</h3>
+        <div id="servicesBox"></div>
+        <div class="two"><input id="serviceAdd" placeholder="Add service"><button onclick="addMaster('services')">Add Service</button></div>
+
+        <h3>SUPPLIES</h3>
+        <div id="suppliesBox"></div>
+        <div class="two"><input id="supplyAdd" placeholder="Add supply"><button onclick="addMaster('supplies')">Add Supply</button></div>
+
+        <h3>EQUIPMENT</h3>
+        <div id="equipmentBox"></div>
+        <div class="two"><input id="equipmentAdd" placeholder="Add equipment"><button onclick="addMaster('equipment')">Add Equipment</button></div>
+
+        <h3>LABOR</h3>
+        <div id="laborBox"></div>
+        <div class="two"><input id="laborAdd" placeholder="Add labor field"><button onclick="addMaster('labor')">Add Labor Field</button></div>
+
+        <div class="invoiceTotals">
+          <div>Total <b id="invTotal">$0.00</b></div>
+          <div>Paid <b id="invPaid">$0.00</b></div>
+          <div>Balance <b id="invBalance">$0.00</b></div>
+        </div>
+
+        <div class="three">
+          <div><label>Status</label><select id="invStatus" onchange="calcInvoice();autoSaveInvoice()"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select></div>
+          <div><label>How Paid</label><select id="invPayMethod" onchange="payMethodChanged();autoSaveInvoice()"><option></option><option>Cash</option><option>Check</option><option>Cash App</option><option>PayPal</option><option>Venmo</option><option>Transfer</option><option>Other</option></select></div>
+          <div><label>Amount Paid</label><input id="invAmountPaid" type="number" step="0.01" oninput="calcInvoice();autoSaveInvoice()"></div>
+        </div>
+
+        <div id="checkPhotoArea" class="hidden">
+          <label>Check Photo</label>
+          <input id="checkPhotoInput" type="file" accept="image/*" capture="environment" onchange="attachCheckPhoto(event)">
+          <img id="checkPhotoPreview" class="photo hidden">
+        </div>
+
+        <label>Notes</label><textarea id="invNotes" oninput="autoSaveInvoice();renderInvoicePreview()"></textarea>
+        <h3>Client Signature</h3>
+        <canvas id="signaturePad" class="signature"></canvas>
+
+        <div class="btnRow">
+          <button onclick="clearSignature()">Clear Signature</button>
+          <button class="good" onclick="saveInvoice()">Save</button>
+          <button class="bad" onclick="deleteInvoice()">Delete</button>
+        </div>
+
+        <div class="btnRow">
+          <button class="blue" onclick="shareInvoice('sms')">Text Invoice</button>
+          <button class="blue" onclick="shareInvoice('email')">Email Invoice</button>
+          <button onclick="shareInvoice('share')">Share</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Invoice Preview</h2>
+        <div id="invoicePreview" class="receipt"></div>
+      </section>
+    </div>
+
+    <section class="panel">
+      <h2>All Invoices</h2>
+      <div id="allInvoices"></div>
+    </section>
+  </section>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
